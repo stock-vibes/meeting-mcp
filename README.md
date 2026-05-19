@@ -2,7 +2,7 @@
 
 AI scheduling assistant for agents · x402 native · MCP compatible · Cloudflare Workers
 
-Live at: `https://meetingmcp.ahrouchabdeallah.workers.dev`
+Live at: `https://meeting-mcp.com`
 
 ---
 
