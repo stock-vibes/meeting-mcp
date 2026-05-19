@@ -591,6 +591,12 @@ function getMcpTools() {
     {
       name: "convert_time",
       description: "Convert a time from one timezone to another. Use when scheduling across countries or checking what time an event is locally.",
+      annotations: {
+        readOnlyHint:    true,
+        idempotentHint:  true,
+        openWorldHint:   false,
+        destructiveHint: false
+      },
       inputSchema: {
         type: "object", required: ["time"],
         properties: {
@@ -598,34 +604,95 @@ function getMcpTools() {
           from: { type: "string", description: "Source timezone (IANA name) e.g. America/New_York. Default: UTC" },
           to:   { type: "string", description: "Target timezone (IANA name) e.g. Europe/London. Default: UTC" }
         }
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          original:    { type: "object", properties: { time: { type: "string" }, timezone: { type: "string" } } },
+          converted:   { type: "object", properties: { time: { type: "string" }, timezone: { type: "string" } } },
+          offset_diff: { type: "string", description: "Timezone offset difference e.g. +5h or -3h 30m" },
+          utc:         { type: "string", description: "UTC representation in ISO 8601 format" },
+          timestamp:   { type: "string", description: "When this response was generated" }
+        }
       }
     },
     {
       name: "get_holidays",
       description: "Get all public holidays for any country and year. Use before scheduling to avoid booking on national holidays.",
+      annotations: {
+        readOnlyHint:    true,
+        idempotentHint:  true,
+        openWorldHint:   true,
+        destructiveHint: false
+      },
       inputSchema: {
         type: "object",
         properties: {
           country: { type: "string", description: "ISO 3166-1 country code e.g. GB, US, DE, FR, JP. Default: GB" },
           year:    { type: "integer", description: "Year e.g. 2026. Default: current year" }
         }
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          country:  { type: "string", description: "ISO country code" },
+          year:     { type: "integer", description: "Year queried" },
+          holidays: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                date: { type: "string", description: "Holiday date in YYYY-MM-DD format" },
+                name: { type: "string", description: "Official holiday name" }
+              }
+            }
+          },
+          count:     { type: "integer", description: "Total number of public holidays" },
+          source:    { type: "string" },
+          timestamp: { type: "string" }
+        }
       }
     },
     {
       name: "check_business_hours",
       description: "Check if it is currently business hours in a given timezone. Use before scheduling a call or sending an outreach.",
+      annotations: {
+        readOnlyHint:    true,
+        idempotentHint:  false,
+        openWorldHint:   false,
+        destructiveHint: false
+      },
       inputSchema: {
         type: "object",
         properties: {
-          timezone:   { type: "string",  description: "IANA timezone e.g. Europe/London, America/New_York, Asia/Tokyo" },
-          work_start: { type: "string",  description: "Business start time in HH:MM format. Default: 09:00" },
-          work_end:   { type: "string",  description: "Business end time in HH:MM format. Default: 17:00" }
+          timezone:   { type: "string", description: "IANA timezone e.g. Europe/London, America/New_York, Asia/Tokyo" },
+          work_start: { type: "string", description: "Business start time in HH:MM format. Default: 09:00" },
+          work_end:   { type: "string", description: "Business end time in HH:MM format. Default: 17:00" }
+        }
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          timezone:           { type: "string", description: "The queried timezone" },
+          current_local_time: { type: "string", description: "Current local time in HH:MM format" },
+          current_day:        { type: "string", description: "Current day of the week e.g. Monday" },
+          business_hours:     { type: "string", description: "Configured business hours range e.g. 09:00-17:00" },
+          is_business_hours:  { type: "boolean", description: "True if currently within business hours" },
+          is_weekend:         { type: "boolean", description: "True if today is Saturday or Sunday" },
+          status:             { type: "string", description: "Human-readable status e.g. OPEN or CLOSED" },
+          timestamp:          { type: "string" }
         }
       }
     },
     {
       name: "find_meeting_slots",
       description: "Find optimal meeting times that work across multiple participant timezones within business hours. Returns up to 10 available time slots.",
+      annotations: {
+        readOnlyHint:    true,
+        idempotentHint:  false,
+        openWorldHint:   false,
+        destructiveHint: false
+      },
       inputSchema: {
         type: "object",
         properties: {
@@ -635,11 +702,39 @@ function getMcpTools() {
           work_start:       { type: "string",  description: "Working hours start HH:MM. Default: 09:00" },
           work_end:         { type: "string",  description: "Working hours end HH:MM. Default: 17:00" }
         }
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          participants:  { type: "array", items: { type: "string" }, description: "List of timezones checked" },
+          duration_min:  { type: "integer", description: "Meeting duration in minutes" },
+          working_hours: { type: "string" },
+          days_checked:  { type: "integer" },
+          slots_found:   { type: "integer", description: "Total number of available slots found" },
+          slots: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                utc:          { type: "string", description: "Slot start time in UTC ISO 8601" },
+                duration_min: { type: "integer" },
+                local_times:  { type: "object", description: "Start time shown in each participant timezone" }
+              }
+            }
+          },
+          timestamp: { type: "string" }
+        }
       }
     },
     {
       name: "create_calendar_link",
       description: "Generate Google Calendar and Outlook add-to-calendar links. Use at the end of any scheduling workflow so participants can add the meeting.",
+      annotations: {
+        readOnlyHint:    true,
+        idempotentHint:  true,
+        openWorldHint:   false,
+        destructiveHint: false
+      },
       inputSchema: {
         type: "object", required: ["title", "start", "end"],
         properties: {
@@ -649,11 +744,35 @@ function getMcpTools() {
           description: { type: "string", description: "Meeting description or agenda" },
           location:    { type: "string", description: "Meeting location or video call link" }
         }
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          start: { type: "string" },
+          end:   { type: "string" },
+          links: {
+            type: "object",
+            properties: {
+              google:      { type: "string", description: "Google Calendar add-to-calendar URL" },
+              outlook:     { type: "string", description: "Outlook add-to-calendar URL" },
+              ics_content: { type: "string", description: "ICS file content for universal calendar import" }
+            }
+          },
+          instructions: { type: "string" },
+          timestamp:     { type: "string" }
+        }
       }
     },
     {
       name: "create_event",
       description: "Create a real event in Google Calendar. Requires the user's Google Calendar access token.",
+      annotations: {
+        readOnlyHint:    false,
+        idempotentHint:  false,
+        openWorldHint:   true,
+        destructiveHint: false
+      },
       inputSchema: {
         type: "object", required: ["access_token", "title", "start", "end"],
         properties: {
@@ -665,6 +784,20 @@ function getMcpTools() {
           description:  { type: "string",  description: "Event description or agenda" },
           location:     { type: "string",  description: "Physical location or video link" },
           timezone:     { type: "string",  description: "IANA timezone for the event. Default: UTC" }
+        }
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          success:   { type: "boolean" },
+          event_id:  { type: "string",  description: "Google Calendar event ID" },
+          title:     { type: "string",  description: "Created event title" },
+          start:     { type: "string",  description: "Event start time in ISO 8601" },
+          end:       { type: "string",  description: "Event end time in ISO 8601" },
+          link:      { type: "string",  description: "Google Calendar URL to view the event" },
+          attendees: { type: "array",   items: { type: "string" }, description: "Invited attendee emails" },
+          status:    { type: "string",  description: "Event status e.g. confirmed" },
+          timestamp: { type: "string" }
         }
       }
     }
