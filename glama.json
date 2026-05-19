@@ -1,0 +1,7 @@
+{
+  "name": "Meeting Intelligence MCP",
+  "description": "AI scheduling assistant for agents. Timezone conversion, public holidays for 100+ countries, business hours checker, multi-timezone meeting slot finder, and Google Calendar event creation.",
+  "license": "MIT",
+  "homepage": "https://meeting-mcp.com",
+  "tags": ["calendar", "scheduling", "timezone", "meeting", "x402", "productivity"]
+}
